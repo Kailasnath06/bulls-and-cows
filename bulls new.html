@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulls and Cows Game</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #1a1a1a;
+        color: white;
+        text-align: center;
+        padding: 40px;
+    }
+
+    h1 { color: #fff; margin-bottom: 20px; }
+
+    #menu, #digitSetup {
+        background: #111;
+        border-radius: 20px;
+        padding: 20px;
+        max-width: 320px;
+        margin: auto;
+    }
+
+    .menu-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #222;
+        border-radius: 12px;
+        padding: 15px;
+        margin: 10px 0;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    .menu-item:hover {
+        background: #333;
+        transform: scale(1.02);
+    }
+
+    .icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        font-size: 14px;
+        color: #fff;
+    }
+
+    .blue { background: #4285f4; }
+    .green { background: #34a853; }
+    .purple { background: #a142f4; }
+    .orange { background: #fbbc04; }
+
+    .menu-text { flex: 1; text-align: left; }
+    .arrow { color: #aaa; font-size: 18px; }
+
+    #game {
+        background: #111;
+        border-radius: 20px;
+        padding: 20px;
+        max-width: 400px;
+        margin: auto;
+    }
+
+    input {
+        padding: 10px;
+        font-size: 16px;
+        width: 120px;
+        text-align: center;
+        margin-top: 10px;
+        border-radius: 8px;
+        border: none;
+    }
+
+    button {
+        margin: 8px;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+    }
+
+    button:hover { opacity: 0.9; }
+    #revealBtn { background: #a142f4; color: #fff; }
+
+    .hidden { display: none; }
+
+    .scoreboard {
+        margin-top: 20px;
+        background: #111;
+        padding: 15px;
+        border-radius: 12px;
+        max-width: 320px;
+        margin: 20px auto;
+    }
+
+    #feedback {
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 10px;
+        color: #fbbc04;
+        min-height: 24px;
+    }
+</style>
+</head>
+<body>
+
+<h1>Bulls and Cows</h1>
+
+<!-- LEVEL MENU -->
+<div id="menu">
+    <div class="menu-item" onclick="selectLevel(1)">
+        <div class="icon blue">E</div>
+        <div class="menu-text">Easy</div>
+        <div class="arrow">›</div>
+    </div>
+    <div class="menu-item" onclick="selectLevel(2)">
+        <div class="icon green">M</div>
+        <div class="menu-text">Medium</div>
+        <div class="arrow">›</div>
+    </div>
+    <div class="menu-item" onclick="selectLevel(3)">
+        <div class="icon purple">H</div>
+        <div class="menu-text">Hard</div>
+        <div class="arrow">›</div>
+    </div>
+    <div class="menu-item" onclick="selectLevel(4)">
+        <div class="icon orange">C</div>
+        <div class="menu-text">Challenger</div>
+        <div class="arrow">›</div>
+    </div>
+</div>
+
+<!-- SETUP PAGE -->
+<div id="digitSetup" class="hidden">
+    <h3>Game Setup</h3>
+
+    <p>Select number of digits (3–6):</p>
+    <input type="number" id="digitInput" min="3" max="6">
+
+    <div id="attemptBox" class="hidden">
+        <p>Enter max attempts (1–50):</p>
+        <input type="number" id="attemptInput" min="1" max="50">
+    </div>
+
+    <br>
+    <button onclick="confirmSetup()">Start</button>
+    <button onclick="backToMenu()">Cancel</button>
+</div>
+
+<!-- GAME SECTION -->
+<div id="game" class="hidden">
+    <p id="instructions"></p>
+    <p>Enter your guess:</p>
+    <input type="number" id="guessInput" />
+    <br>
+    <button onclick="submitGuess()">Submit</button>
+    <button id="revealBtn" onclick="revealSecret()">Reveal Secret</button>
+    <p id="feedback"></p>
+    <p id="attempts"></p>
+    <button onclick="backToMenu()">Back to Menu</button>
+</div>
+
+<!-- SCOREBOARD -->
+<div class="scoreboard">
+    <h3>Scoreboard</h3>
+    <p id="scoreEasy"></p>
+    <p id="scoreMedium"></p>
+    <p id="scoreHard"></p>
+    <p id="scoreChallenger"></p>
+</div>
+
+<script>
+let winsEasy = 0, winsMedium = 0, winsHard = 0, winsChallenger = 0;
+let lossesMedium = 0, lossesHard = 0, lossesChallenger = 0;
+
+let secret, length, level, maxAttempts, attempts;
+
+const menuDiv = document.getElementById("menu");
+const gameDiv = document.getElementById("game");
+const digitSetup = document.getElementById("digitSetup");
+const instructions = document.getElementById("instructions");
+const feedback = document.getElementById("feedback");
+const attemptsP = document.getElementById("attempts");
+const guessInput = document.getElementById("guessInput");
+const revealBtn = document.getElementById("revealBtn");
+const attemptBox = document.getElementById("attemptBox");
+
+function showMessage(msg) {
+    feedback.innerText = msg;
+}
+
+function selectLevel(lv) {
+    level = lv;
+    menuDiv.classList.add("hidden");
+    digitSetup.classList.remove("hidden");
+
+    if (level === 4) {
+        attemptBox.classList.remove("hidden");
+    } else {
+        attemptBox.classList.add("hidden");
+    }
+}
+
+function confirmSetup() {
+    let d = parseInt(document.getElementById("digitInput").value);
+
+    if (isNaN(d) || d < 3 || d > 6) {
+        alert("Enter digits between 3 and 6");
+        return;
+    }
+
+    length = d;
+
+    if (level === 4) {
+        let a = parseInt(document.getElementById("attemptInput").value);
+        if (isNaN(a) || a < 1 || a > 50) {
+            alert("Enter attempts between 1 and 50");
+            return;
+        }
+        maxAttempts = a;
+    } else {
+        maxAttempts = level === 1 ? 0 : level === 2 ? 10 : 5;
+    }
+
+    digitSetup.classList.add("hidden");
+    startGame();
+}
+
+function hasDuplicateDigits(num, len) {
+    let digits = new Set();
+    let str = num.toString().padStart(len,'0');
+    for (let d of str) {
+        if (digits.has(d)) return true;
+        digits.add(d);
+    }
+    return false;
+}
+
+function generateSecret(len) {
+    let min = Math.pow(10, len - 1);
+    let max = Math.pow(10, len) - 1;
+    let n;
+    do {
+        n = Math.floor(Math.random() * (max - min + 1)) + min;
+    } while (hasDuplicateDigits(n, len));
+    return n;
+}
+
+function updateScoreboard() {
+    scoreEasy.innerText = `Easy: Wins = ${winsEasy}`;
+    scoreMedium.innerText = `Medium: Wins = ${winsMedium}, Losses = ${lossesMedium}`;
+    scoreHard.innerText = `Hard: Wins = ${winsHard}, Losses = ${lossesHard}`;
+    scoreChallenger.innerText = `Challenger: Wins = ${winsChallenger}, Losses = ${lossesChallenger}`;
+}
+
+function startGame() {
+    attempts = 0;
+    secret = generateSecret(length);
+
+    gameDiv.classList.remove("hidden");
+    feedback.innerText = "";
+    guessInput.value = "";
+
+    if (level === 1) {
+        instructions.innerText = "Easy: Unlimited attempts.";
+        revealBtn.style.display = "inline";
+    } else if (level === 2) {
+        instructions.innerText = "Medium: 10 attempts.";
+        revealBtn.style.display = "none";
+    } else if (level === 3) {
+        instructions.innerText = "Hard: 5 attempts.";
+        revealBtn.style.display = "none";
+    } else {
+        instructions.innerText = `Challenger Mode`;
+        revealBtn.style.display = "none";
+    }
+
+    attemptsP.innerText = `Attempts: 0 / ${maxAttempts === 0 ? "Unlimited" : maxAttempts}`;
+}
+
+function submitGuess() {
+    let guess = parseInt(guessInput.value);
+
+    if (level === 1 && guess === -1) {
+        showMessage(`Secret: ${secret}`);
+        return;
+    }
+
+    if (isNaN(guess) || hasDuplicateDigits(guess, length) ||
+        guess < Math.pow(10, length - 1) || guess > Math.pow(10, length) - 1) {
+        showMessage(`❗ Enter a valid ${length}-digit number (no repeat digits).`);
+        return;
+    }
+
+    attempts++;
+
+    let s = secret.toString();
+    let g = guess.toString().padStart(length,'0');
+
+    let bulls = 0, cows = 0;
+
+    let sd = s.split('');
+    let gd = g.split('');
+
+    for (let i = 0; i < length; i++) {
+        if (sd[i] === gd[i]) {
+            bulls++;
+            sd[i] = gd[i] = "-";
+        }
+    }
+
+    for (let i = 0; i < length; i++) {
+        if (gd[i] === "-") continue;
+        let ix = sd.indexOf(gd[i]);
+        if (ix !== -1) {
+            cows++;
+            sd[ix] = "-";
+        }
+    }
+
+    showMessage(`Bulls: ${bulls}, Cows: ${cows}`);
+    attemptsP.innerText = `Attempts: ${attempts} / ${maxAttempts === 0 ? "Unlimited" : maxAttempts}`;
+
+    if (bulls === length) {
+        showMessage(`🎉 You guessed it! Secret = ${secret}`);
+        if (level === 1) winsEasy++;
+        if (level === 2) winsMedium++;
+        if (level === 3) winsHard++;
+        if (level === 4) winsChallenger++;
+        updateScoreboard();
+        return;
+    }
+
+    if (maxAttempts > 0 && attempts >= maxAttempts) {
+        showMessage(`❌ Game Over! Secret was ${secret}`);
+        if (level === 2) lossesMedium++;
+        if (level === 3) lossesHard++;
+        if (level === 4) lossesChallenger++;
+        updateScoreboard();
+    }
+}
+
+function revealSecret() {
+    showMessage(`Secret: ${secret}`);
+}
+
+function backToMenu() {
+    gameDiv.classList.add("hidden");
+    digitSetup.classList.add("hidden");
+    menuDiv.classList.remove("hidden");
+    updateScoreboard();
+}
+
+updateScoreboard();
+</script>
+</body>
+</html>
